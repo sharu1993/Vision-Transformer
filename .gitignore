@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#MAC releated
+.DS_Store
+
+#data related
+data/
+
+#mlflow related
+mlflow.db
+mlruns/
+artifacts/
