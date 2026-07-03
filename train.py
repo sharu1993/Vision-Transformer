@@ -133,6 +133,7 @@ for epoch in range(epochs):
     val_loss=0
     correct=0
     total=0
+    best_val_loss=0
     
     with torch.no_grad():
         for images,labels in valloader:
@@ -155,8 +156,18 @@ for epoch in range(epochs):
     mlflow.log_metric("train_loss",train_loss/len(trainloader),step=epoch+1)
     mlflow.log_metric("valid_loss",val_loss,step=epoch+1)
     mlflow.log_metric("valid_acc",accuracy,step=epoch+1)
+    if best_val_loss>val_loss:
+        #save model with best validation loss
+        torch.save({
+            "epoch":epoch,
+            "model_state_dic":model.state_dict(),
+            "optimizer_state_dict":optimizer.state_dict(),
+            "val_acc":accuracy,
+            "val_loss":val_loss
+        },"best_vit_model.pt")
+        print(f"Model saved")
 
-#evaluation
+#evaluation (load best model)
 model.eval()
 correct=0
 total=0

@@ -5,8 +5,11 @@ Legend:
 [t] - Testing
 
 To-Do List:
-[] Add model saving
+[x] Add model saving
+[] Add loading of best model that was saved for evaluation
 [] Add config file for better hyperparameter modification
 [] Better stats
 [x] Create validation set to keep track of training
 [] Save best model during training based on validation set
+[] Add hyperparameter modification based on validation results
+[] Add clean exits using checkpoints
