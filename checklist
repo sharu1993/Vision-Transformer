@@ -1,3 +1,8 @@
+Data
+- Augment the data
+- Apply normalization
+- Play around with it
+
 Model training
 - Apply transformation
 - Make sure you shuffle the data during training
