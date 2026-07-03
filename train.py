@@ -74,7 +74,7 @@ model=vit.VisionTransformer(
 
 criterion=nn.CrossEntropyLoss()
 optimizer=optim.AdamW(model.parameters(),lr=3e-4,weight_decay=1e-4)
-epochs=10
+epochs=50
 
 #log dicts
 config={
