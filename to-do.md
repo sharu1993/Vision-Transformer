@@ -10,6 +10,6 @@ To-Do List:
 [] Add config file for better hyperparameter modification
 [] Better stats
 [x] Create validation set to keep track of training
-[] Save best model during training based on validation set
+[x] Save best model during training based on validation set
 [] Add hyperparameter modification based on validation results
 [] Add clean exits using checkpoints
