@@ -36,7 +36,7 @@ transform=transforms.Compose([
     transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
 ])
 
-trainset=torchvision.datasets.CIFAR10(
+trainset_full=torchvision.datasets.CIFAR10(
     root="./data",
     train=True,
     download=True,
@@ -50,10 +50,27 @@ testset=torchvision.datasets.CIFAR10(
     transform=transform
 )
 
+#create a validation set from the training data
+train_size = int(0.9*len(trainset_full))
+val_size=len(trainset_full)-train_size
+
+trainset,valset = torch.utils.data.random_split(
+    trainset_full,
+    [train_size,val_size],
+    generator=torch.Generator().manual_seed(15) #have a fixed seed for now
+)
+valset.dataset.transform=transform
+
 trainloader=torch.utils.data.DataLoader(
     trainset,
     batch_size=128,
     shuffle=True
+)
+
+valloader=torch.utils.data.DataLoader(
+    valset,
+    batch_size=128,
+    shuffle=False
 )
 
 testloader=torch.utils.data.DataLoader(
@@ -61,6 +78,8 @@ testloader=torch.utils.data.DataLoader(
     batch_size=128,
     shuffle=False
 )
+
+
 
 model=vit.VisionTransformer(
     img_size=32,
@@ -96,7 +115,7 @@ mlflow.log_params({
 #training loop
 for epoch in range(epochs):
     model.train()
-    total_loss=0
+    train_loss=0
 
     for images, labels in trainloader:
         images,labels=images.to(device),labels.to(device)
@@ -108,9 +127,34 @@ for epoch in range(epochs):
         loss.backward()
         optimizer.step()
 
-        total_loss+=loss
-    print(f"Epoch {epoch}, Loss: {total_loss/len(trainloader):.4f}")
-    mlflow.log_metric("train_loss",total_loss/len(trainloader),step=epoch+1)
+        train_loss+=loss
+    #validation for each epoch
+    model.eval()
+    val_loss=0
+    correct=0
+    total=0
+    
+    with torch.no_grad():
+        for images,labels in valloader:
+            images,labels=images.to(device),labels.to(device)
+            
+            outputs=model(images)
+            
+            loss=criterion(outputs,labels)
+            val_loss+=loss
+
+            pred=outputs.argmax(dim=1)
+            correct+=(pred==labels).sum().item()
+            total+=labels.size(0)
+        val_loss/=len(valloader)
+        accuracy=correct/total
+
+    print(
+        f"Epoch {epoch}, Train Loss: {train_loss/len(trainloader):.4f}, Validation Loss: {val_loss:.4f}, Valid Acc. : {100*accuracy:.4f}"
+    )
+    mlflow.log_metric("train_loss",train_loss/len(trainloader),step=epoch+1)
+    mlflow.log_metric("valid_loss",val_loss,step=epoch+1)
+    mlflow.log_metric("valid_acc",accuracy,step=epoch+1)
 
 #evaluation
 model.eval()
