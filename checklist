@@ -1,0 +1,12 @@
+Model training
+- Apply transformation
+- Make sure you shuffle the data during training
+- Optimizer: 
+  - Type
+  - learning rate
+  - weight decay
+  - momentum
+  - set optimizer to zero_grad during training
+
+Evaluation:
+- set torch no grad
