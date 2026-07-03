@@ -6,6 +6,8 @@ import torchvision.transforms as transforms
 
 import vision_transformer_model as vit
 import mlflow
+import mlflow.pytorch
+from mlflow.models import infer_signature
 
 #set up mlflow
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
@@ -127,10 +129,5 @@ with torch.no_grad():
         "Accuracy":100*correct/total
     })
 
-ex_input=torch.randn(1,3,32,32).to(device=device)
-mlflow.pytorch.log_model(
-    model,
-    name="model",
-    input_example=ex_input
-)
+#save model later
 mlflow.end_run()
