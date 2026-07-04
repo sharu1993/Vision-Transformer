@@ -91,14 +91,16 @@ model=vit.VisionTransformer(
     num_classes=10
 ).to(device)
 
-criterion=nn.CrossEntropyLoss()
+criterion=nn.CrossEntropyLoss(label_smoothing=0.1)
 optimizer=optim.AdamW(model.parameters(),lr=3e-4,weight_decay=1e-4)
-epochs=50
+scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer,T_max=50)
+epochs=500
 
 #log dicts
 config={
     "optimizer":"AdamW",
-    "Criterion":"Cosine"
+    "Criterion":"Cosine",
+    "Scheduler":"CosineAnnealinglR"
 }
 mlflow.log_dict(config,"config.json")
 #log hyperparameters
@@ -108,7 +110,8 @@ mlflow.log_params({
     "patch_size":4,
     "depth":6,
     "heads":4,
-    "learning_rate":3e-4
+    "learning_rate":3e-4,
+    "weight_decay":1e-4
 })
 
 
@@ -128,6 +131,7 @@ for epoch in range(epochs):
         optimizer.step()
 
         train_loss+=loss
+    scheduler.step()
     #validation for each epoch
     model.eval()
     val_loss=0
@@ -163,7 +167,8 @@ for epoch in range(epochs):
             "model_state_dic":model.state_dict(),
             "optimizer_state_dict":optimizer.state_dict(),
             "val_acc":accuracy,
-            "val_loss":val_loss
+            "val_loss":val_loss,
+            "scheduler_state_dict":scheduler.state_dict()
         },"best_vit_model.pt")
         print(f"Model saved")
 
