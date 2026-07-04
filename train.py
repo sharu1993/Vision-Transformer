@@ -84,10 +84,10 @@ testloader=torch.utils.data.DataLoader(
 
 model=vit.VisionTransformer(
     img_size=32,
-    patch_size=4,
+    patch_size=16,
     embed_dim=128,
     depth=6,
-    num_heads=4,
+    num_heads=8,
     mlp_dim=256,
     num_classes=10
 ).to(device)
@@ -95,9 +95,9 @@ model=vit.VisionTransformer(
 criterion=nn.CrossEntropyLoss(label_smoothing=0.1)
 optimizer=optim.AdamW(model.parameters(),lr=3e-4,weight_decay=1e-4)
 scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer=optimizer,mode='min',factor=0.6,patience=30
+    optimizer=optimizer,mode='min',factor=0.6,patience=250
 )
-epochs=500
+epochs=5000
 
 #log dicts
 config={
@@ -110,9 +110,9 @@ mlflow.log_dict(config,"config.json")
 mlflow.log_params({
     "epochs":epochs,
     "batch_size":128,
-    "patch_size":4,
+    "patch_size":16,
     "depth":6,
-    "heads":4,
+    "heads":8,
     "learning_rate":3e-4,
     "weight_decay":1e-4
 })
@@ -156,6 +156,7 @@ for epoch in range(epochs):
         val_loss/=len(valloader)
         accuracy=correct/total
 
+    scheduler.step(val_loss)
     print(
         f"Epoch {epoch}, Train Loss: {train_loss/len(trainloader):.4f}, Validation Loss: {val_loss:.4f}, Valid Acc. : {100*accuracy:.4f}"
     )
