@@ -32,6 +32,7 @@ else:
     device=torch.device("cpu")
 
 transform=transforms.Compose([
+    transforms.AutoAugment(policy=transforms.AutoAugmentPolicy.CIFAR10),
     transforms.ToTensor(),
     transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
 ])

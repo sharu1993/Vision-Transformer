@@ -13,3 +13,5 @@ To-Do List:
 [x] Save best model during training based on validation set
 [] Add hyperparameter modification based on validation results
 [] Add clean exits using checkpoints
+[o] Try out AutoAugment
+[x] Implement scheduler
