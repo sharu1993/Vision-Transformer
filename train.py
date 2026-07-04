@@ -94,7 +94,9 @@ model=vit.VisionTransformer(
 
 criterion=nn.CrossEntropyLoss(label_smoothing=0.1)
 optimizer=optim.AdamW(model.parameters(),lr=3e-4,weight_decay=1e-4)
-scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer,T_max=50)
+scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer=optimizer,mode='min',factor=0.01,patience=30
+)
 epochs=500
 
 #log dicts
@@ -132,7 +134,6 @@ for epoch in range(epochs):
         optimizer.step()
 
         train_loss+=loss
-    scheduler.step()
     #validation for each epoch
     model.eval()
     val_loss=0
@@ -155,6 +156,7 @@ for epoch in range(epochs):
         val_loss/=len(valloader)
         accuracy=correct/total
 
+    scheduler.step(val_loss)
     print(
         f"Epoch {epoch}, Train Loss: {train_loss/len(trainloader):.4f}, Validation Loss: {val_loss:.4f}, Valid Acc. : {100*accuracy:.4f}"
     )

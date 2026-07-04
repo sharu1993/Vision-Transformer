@@ -14,4 +14,4 @@ To-Do List:
 [] Add hyperparameter modification based on validation results
 [] Add clean exits using checkpoints
 [o] Try out AutoAugment
-[x] Implement scheduler
+[x] Implement scheduler (using LRonPlateau...changes if validation loss stalls)
