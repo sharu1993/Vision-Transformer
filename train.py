@@ -32,7 +32,7 @@ elif torch.cuda.is_available():
 else:
     device=torch.device("cpu")
 
-config=utils.ReadConfig("model.config")
+config=utils.read_config("model.config")
 
 transform=transforms.Compose([
     transforms.AutoAugment(policy=transforms.AutoAugmentPolicy.CIFAR10),
@@ -111,15 +111,7 @@ train_config={
 
 mlflow.log_dict(train_config,"train_config.json")
 #log hyperparameters
-mlflow.log_params({
-    "epochs":epochs,
-    "batch_size":config['training']['batch_size'],
-    "patch_size":config['model']['patch_size'],
-    "depth":config['model']['depth'],
-    "heads":config['model']['num_heads'],
-    "learning_rate":config['training']['learning_rate'],
-    "weight_decay":config['training']['weight_decay']
-})
+mlflow.log_params(utils.flatten_dict(config))
 
 
 #training loop
@@ -180,6 +172,7 @@ for epoch in range(epochs):
             "scheduler_state_dict":scheduler.state_dict()
         },"best_vit_model.pt")
         print(f"Model saved")
+
 
 mlflow.log_metric("Best Validation Accuracy",best_val_loss)
 
