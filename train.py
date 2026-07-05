@@ -8,6 +8,7 @@ import vision_transformer_model as vit
 import mlflow
 import mlflow.pytorch
 from mlflow.models import infer_signature
+import utils
 
 #set up mlflow
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
@@ -31,6 +32,8 @@ elif torch.cuda.is_available():
 else:
     device=torch.device("cpu")
 
+config=utils.ReadConfig("model.config")
+
 transform=transforms.Compose([
     transforms.AutoAugment(policy=transforms.AutoAugmentPolicy.CIFAR10),
     transforms.ToTensor(),
@@ -52,7 +55,7 @@ testset=torchvision.datasets.CIFAR10(
 )
 
 #create a validation set from the training data
-train_size = int(0.9*len(trainset_full))
+train_size = int((1-config['data']['valid_size'])*len(trainset_full))
 val_size=len(trainset_full)-train_size
 
 trainset,valset = torch.utils.data.random_split(
@@ -64,57 +67,58 @@ valset.dataset.transform=transform
 
 trainloader=torch.utils.data.DataLoader(
     trainset,
-    batch_size=128,
+    batch_size=config['training']['batch_size'],
     shuffle=True
 )
 
 valloader=torch.utils.data.DataLoader(
     valset,
-    batch_size=128,
+    batch_size=config['training']['batch_size'],
     shuffle=False
 )
 
 testloader=torch.utils.data.DataLoader(
     testset,
-    batch_size=128,
+    batch_size=config['training']['batch_size'],
     shuffle=False
 )
 
 
 
 model=vit.VisionTransformer(
-    img_size=32,
-    patch_size=16,
-    embed_dim=128,
-    depth=6,
-    num_heads=8,
-    mlp_dim=256,
-    num_classes=10
+    img_size=config['model']['img_size'],
+    patch_size=config['model']['patch_size'],
+    embed_dim=config['model']['embed_dim'],
+    depth=config['model']['depth'],
+    num_heads=config['model']['num_heads'],
+    mlp_dim=config['model']['mlp_dim'],
+    num_classes=config['data']['num_classes']
 ).to(device)
 
-criterion=nn.CrossEntropyLoss(label_smoothing=0.1)
-optimizer=optim.AdamW(model.parameters(),lr=3e-4,weight_decay=1e-4)
+criterion=nn.CrossEntropyLoss(label_smoothing=config['data']['label_smoothing'])
+optimizer=optim.AdamW(model.parameters(),lr=config['training']['learning_rate'],weight_decay=config['training']['weight_decay'])
 scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer=optimizer,mode='min',factor=0.6,patience=250
+    optimizer=optimizer,mode='min',factor=0.01,patience=30
 )
-epochs=5000
+epochs=config['training']['epochs']
 
 #log dicts
-config={
+train_config={
     "optimizer":"AdamW",
     "Criterion":"Cosine",
     "Scheduler":"LROnPLateau"
 }
-mlflow.log_dict(config,"config.json")
+
+mlflow.log_dict(train_config,"train_config.json")
 #log hyperparameters
 mlflow.log_params({
     "epochs":epochs,
-    "batch_size":128,
-    "patch_size":16,
-    "depth":6,
-    "heads":8,
-    "learning_rate":3e-4,
-    "weight_decay":1e-4
+    "batch_size":config['training']['batch_size'],
+    "patch_size":config['model']['patch_size'],
+    "depth":config['model']['depth'],
+    "heads":config['model']['num_heads'],
+    "learning_rate":config['training']['learning_rate'],
+    "weight_decay":config['training']['weight_decay']
 })
 
 
@@ -122,7 +126,7 @@ mlflow.log_params({
 for epoch in range(epochs):
     model.train()
     train_loss=0
-
+    cur_lr=optimizer.param_groups[0]['lr']
     for images, labels in trainloader:
         images,labels=images.to(device),labels.to(device)
 
@@ -157,6 +161,7 @@ for epoch in range(epochs):
         accuracy=correct/total
 
     scheduler.step(val_loss)
+    
     print(
         f"Epoch {epoch}, Train Loss: {train_loss/len(trainloader):.4f}, Validation Loss: {val_loss:.4f}, Valid Acc. : {100*accuracy:.4f}"
     )
