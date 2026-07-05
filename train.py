@@ -32,6 +32,7 @@ else:
     device=torch.device("cpu")
 
 transform=transforms.Compose([
+    transforms.AutoAugment(policy=transforms.AutoAugmentPolicy.CIFAR10),
     transforms.ToTensor(),
     transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
 ])
@@ -83,32 +84,37 @@ testloader=torch.utils.data.DataLoader(
 
 model=vit.VisionTransformer(
     img_size=32,
-    patch_size=4,
+    patch_size=16,
     embed_dim=128,
     depth=6,
-    num_heads=4,
+    num_heads=8,
     mlp_dim=256,
     num_classes=10
 ).to(device)
 
-criterion=nn.CrossEntropyLoss()
+criterion=nn.CrossEntropyLoss(label_smoothing=0.1)
 optimizer=optim.AdamW(model.parameters(),lr=3e-4,weight_decay=1e-4)
-epochs=50
+scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer=optimizer,mode='min',factor=0.6,patience=250
+)
+epochs=5000
 
 #log dicts
 config={
     "optimizer":"AdamW",
-    "Criterion":"Cosine"
+    "Criterion":"Cosine",
+    "Scheduler":"LROnPLateau"
 }
 mlflow.log_dict(config,"config.json")
 #log hyperparameters
 mlflow.log_params({
     "epochs":epochs,
     "batch_size":128,
-    "patch_size":4,
+    "patch_size":16,
     "depth":6,
-    "heads":4,
-    "learning_rate":3e-4
+    "heads":8,
+    "learning_rate":3e-4,
+    "weight_decay":1e-4
 })
 
 
@@ -150,12 +156,14 @@ for epoch in range(epochs):
         val_loss/=len(valloader)
         accuracy=correct/total
 
+    scheduler.step(val_loss)
     print(
         f"Epoch {epoch}, Train Loss: {train_loss/len(trainloader):.4f}, Validation Loss: {val_loss:.4f}, Valid Acc. : {100*accuracy:.4f}"
     )
     mlflow.log_metric("train_loss",train_loss/len(trainloader),step=epoch+1)
     mlflow.log_metric("valid_loss",val_loss,step=epoch+1)
     mlflow.log_metric("valid_acc",accuracy,step=epoch+1)
+    mlflow.log_metric("cur_lr",cur_lr,step=epoch+1)
     if best_val_loss>val_loss:
         #save model with best validation loss
         torch.save({
@@ -163,9 +171,12 @@ for epoch in range(epochs):
             "model_state_dic":model.state_dict(),
             "optimizer_state_dict":optimizer.state_dict(),
             "val_acc":accuracy,
-            "val_loss":val_loss
+            "val_loss":val_loss,
+            "scheduler_state_dict":scheduler.state_dict()
         },"best_vit_model.pt")
         print(f"Model saved")
+
+mlflow.log_metric("Best Validation Accuracy",best_val_loss)
 
 #evaluation (load best model)
 model.eval()
