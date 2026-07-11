@@ -9,6 +9,7 @@ import mlflow
 import mlflow.pytorch
 from mlflow.models import infer_signature
 import utils
+import pdb
 
 #set up mlflow
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
@@ -55,7 +56,7 @@ testset=torchvision.datasets.CIFAR10(
 )
 
 #create a validation set from the training data
-train_size = int((1-config['data']['valid_size'])*len(trainset_full))
+train_size = int((1-config['data']['valid_split'])*len(trainset_full))
 val_size=len(trainset_full)-train_size
 
 trainset,valset = torch.utils.data.random_split(
@@ -135,7 +136,7 @@ for epoch in range(epochs):
     val_loss=0
     correct=0
     total=0
-    best_val_loss=0
+    best_val_loss=float('inf')
     
     with torch.no_grad():
         for images,labels in valloader:
@@ -165,7 +166,7 @@ for epoch in range(epochs):
         #save model with best validation loss
         torch.save({
             "epoch":epoch,
-            "model_state_dic":model.state_dict(),
+            "model_state_dict":model.state_dict(),
             "optimizer_state_dict":optimizer.state_dict(),
             "val_acc":accuracy,
             "val_loss":val_loss,
@@ -177,7 +178,19 @@ for epoch in range(epochs):
 mlflow.log_metric("Best Validation Accuracy",best_val_loss)
 
 #evaluation (load best model)
-model.eval()
+saved_checkpoint=torch.load('best_vit_model.pt')
+eval_model=vit.VisionTransformer(
+    img_size=config['model']['img_size'],
+    patch_size=config['model']['patch_size'],
+    embed_dim=config['model']['embed_dim'],
+    depth=config['model']['depth'],
+    num_heads=config['model']['num_heads'],
+    mlp_dim=config['model']['mlp_dim'],
+    num_classes=config['data']['num_classes']
+)
+eval_model.load_state_dict(saved_checkpoint['model_state_dict'])
+eval_model.eval()
+model.to(device)
 correct=0
 total=0
 

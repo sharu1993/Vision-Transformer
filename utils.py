@@ -8,7 +8,7 @@ def read_config(config_path:str="model.config"):
     if cfg_path.exists():
         with open(config_path,'r') as cfg:
             cfg=yaml.safe_load(cfg)
-        return cfg
+        return cfg['model'],cfg['training'],cfg['data']
     else:
         print(f"Path to config file does not exist: {cfg_path}")
 
